@@ -25,17 +25,14 @@ from torch import nn
 
 
 class ShortConvolution(nn.Conv1d):
-    """Depthwise causal convolution + SiLU with a rolling input cache (fla's, ``silu``)."""
+    """Depthwise causal convolution + SiLU with a rolling input cache (fla's, ``silu``).
+
+    Subclasses ``nn.Conv1d`` only for its ``weight`` and ``bias``, named and shaped as
+    in fla. ``forward`` pads causally with the cache instead of Conv1d's padding.
+    """
 
     def __init__(self, hidden_size: int, kernel_size: int, bias: bool = False):
-        super().__init__(
-            hidden_size,
-            hidden_size,
-            kernel_size,
-            groups=hidden_size,
-            bias=bias,
-            padding=kernel_size - 1,
-        )
+        super().__init__(hidden_size, hidden_size, kernel_size, groups=hidden_size, bias=bias)
 
     def forward(
         self, x: torch.Tensor, cache: torch.Tensor | None

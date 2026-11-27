@@ -12,8 +12,8 @@ import pytest
 import torch
 import torch.nn.functional as F
 
-from haas_asr import _fla
-from haas_asr._fla import load_kda_class, resolve_kda_backend, use_kda_backend
+from haas_asr import _kda
+from haas_asr._kda import load_kda_class, resolve_kda_backend, use_kda_backend
 from haas_asr._kda_torch import TorchKimiDeltaAttention, recurrent_kda
 from haas_asr.prednet import KDAConfig, KDAPredictionNetwork, _LayerCache
 
@@ -95,7 +95,7 @@ def test_prednet_state_round_trips_with_the_port():
     torch.testing.assert_close(torch.cat(outs, 0), full, atol=1e-5, rtol=1e-5)
 
 
-@pytest.mark.skipif(not _fla.fla_available(), reason="needs a CUDA GPU and Triton")
+@pytest.mark.skipif(not _kda.fla_available(), reason="needs a CUDA GPU and Triton")
 def test_port_matches_fla_layer_on_cuda():
     from fla.layers.kda import KimiDeltaAttention
 
@@ -115,12 +115,12 @@ def test_port_matches_fla_layer_on_cuda():
 
 
 def test_backend_precedence(monkeypatch):
-    monkeypatch.setattr(_fla, "fla_available", lambda: True)
-    monkeypatch.delenv(_fla.KDA_BACKEND_ENV, raising=False)
+    monkeypatch.setattr(_kda, "fla_available", lambda: True)
+    monkeypatch.delenv(_kda.KDA_BACKEND_ENV, raising=False)
     assert resolve_kda_backend() == "fla"
     assert resolve_kda_backend(device="cuda:0") == "fla"
     assert resolve_kda_backend(device="cpu") == "torch"
-    monkeypatch.setenv(_fla.KDA_BACKEND_ENV, "torch")
+    monkeypatch.setenv(_kda.KDA_BACKEND_ENV, "torch")
     assert resolve_kda_backend(device="cuda") == "torch"
     with use_kda_backend("fla"):
         assert resolve_kda_backend() == "fla"
@@ -129,8 +129,8 @@ def test_backend_precedence(monkeypatch):
 
 
 def test_auto_falls_back_to_the_port_without_fla(monkeypatch):
-    monkeypatch.setattr(_fla, "fla_available", lambda: False)
-    monkeypatch.delenv(_fla.KDA_BACKEND_ENV, raising=False)
+    monkeypatch.setattr(_kda, "fla_available", lambda: False)
+    monkeypatch.delenv(_kda.KDA_BACKEND_ENV, raising=False)
     assert resolve_kda_backend() == "torch"
     assert resolve_kda_backend(device="cuda") == "torch"
     assert load_kda_class() is TorchKimiDeltaAttention
@@ -139,6 +139,6 @@ def test_auto_falls_back_to_the_port_without_fla(monkeypatch):
 def test_unknown_backend_is_refused(monkeypatch):
     with pytest.raises(ValueError, match="triton"):
         resolve_kda_backend("triton")
-    monkeypatch.setenv(_fla.KDA_BACKEND_ENV, "gpu")
+    monkeypatch.setenv(_kda.KDA_BACKEND_ENV, "gpu")
     with pytest.raises(ValueError, match="gpu"):
         resolve_kda_backend()

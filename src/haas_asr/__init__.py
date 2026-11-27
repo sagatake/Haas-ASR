@@ -6,7 +6,7 @@ it before calling ``ASRModel.from_pretrained`` or ``restore_from`` directly.
 
 from importlib.metadata import PackageNotFoundError, version
 
-from haas_asr._fla import use_kda_backend
+from haas_asr._kda import use_kda_backend
 from haas_asr._nemo import allow_package_targets
 from haas_asr.audio import SAMPLE_RATE, load_audio
 from haas_asr.longform import split_at_quiet_points, transcribe_longform

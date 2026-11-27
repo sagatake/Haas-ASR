@@ -7,7 +7,7 @@ from pathlib import Path
 import torch
 from nemo.collections.asr.models import ASRModel
 
-from haas_asr._fla import KDABackend, resolve_kda_backend, use_kda_backend
+from haas_asr._kda import KDABackend, resolve_kda_backend, use_kda_backend
 
 # Sentinel for load_model's default precision (None already means "as restored").
 AUTO = "auto"
@@ -38,11 +38,9 @@ def load_model(
     in float32 and give slightly different transcripts. ``None`` keeps the
     parameters as restored.
 
-    `kda_backend` chooses the decoder's attention kernels: ``"fla"`` for
-    flash-linear-attention's Triton kernels (CUDA only), ``"torch"`` for the
-    pure-PyTorch port, which also runs on the CPU, or ``"auto"``: fla on a CUDA
-    device, the port otherwise. ``None`` reads ``HAAS_KDA_BACKEND``, falling back
-    to ``"auto"``.
+    `kda_backend` chooses the decoder's attention kernels (see ``haas_asr._kda``):
+    ``"fla"`` (CUDA only), ``"torch"`` (any device) or ``"auto"``. ``None`` reads
+    ``HAAS_KDA_BACKEND``, falling back to ``"auto"``.
     """
     backend = resolve_kda_backend(kda_backend, device)
     if backend == "fla" and torch.device(device).type != "cuda":
