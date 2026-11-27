@@ -41,9 +41,10 @@ shows how to reproduce the Haas-ja-v1.0 results.
 
 ## Requirements
 
-- Linux with an NVIDIA GPU. The decoder's attention kernels come from
-  [flash-linear-attention](https://github.com/fla-org/flash-linear-attention),
-  which needs Triton and CUDA, so CPU and macOS are not supported.
+- Linux with an NVIDIA GPU for the published speed. The decoder's attention kernels
+  come from [flash-linear-attention](https://github.com/fla-org/flash-linear-attention),
+  which needs Triton and CUDA. Without them (on the CPU, or on macOS), a pure-PyTorch
+  port of the same layer is used instead; see [Running on the CPU](#running-on-the-cpu).
 - Python 3.11+, NeMo 2.7.
 - The speaker-label example has its own environment, with Python 3.12 and a newer NeMo.
   It is created in `examples/speakers/` the first time you run the example and leaves
@@ -91,6 +92,30 @@ resamples it to 16 kHz, the model's input. `load_model` returns a regular NeMo
 `ASRModel`, so everything in NeMo's ASR API works on it. To use
 `ASRModel.from_pretrained` yourself, `import haas_asr` first so that NeMo can build
 the custom decoder.
+
+## Running on the CPU
+
+Pass `device="cpu"`:
+
+```python
+model = haas_asr.load_model("third-intelligence/Haas-ja-v1.0", device="cpu")
+```
+
+The decoder's Kimi Delta Attention then runs on a pure-PyTorch port of
+flash-linear-attention's layer, with the same parameters, so the same checkpoint loads
+unchanged. The model computes in float32 on the CPU (see `dtype` in `load_model`).
+
+`kda_backend` chooses the implementation explicitly:
+
+| `kda_backend` | Attention kernels |
+| --- | --- |
+| `"auto"` (default) | flash-linear-attention on a CUDA device, the PyTorch port otherwise |
+| `"fla"` | flash-linear-attention's Triton kernels (CUDA only) |
+| `"torch"` | the PyTorch port, on any device (e.g. to compare with fla on a GPU) |
+
+The `HAAS_KDA_BACKEND` environment variable sets the same choice when `kda_backend` is
+not given. To call `ASRModel.restore_from` or `from_pretrained` yourself, wrap it in
+`haas_asr.use_kda_backend("torch")`: the backend is chosen when the decoder is built.
 
 ## Long-form audio
 
